@@ -32,6 +32,7 @@ import fs from "fs";
 import path from "path";
 import { createWriteStream } from "fs";
 import archiver from "archiver";
+import readline from "readline";
 import {
   generateECDSAKeyPair,
   signPayload,
@@ -43,6 +44,47 @@ import {
 interface EdgeOTAConfig {
   serverUrl: string;
   publicKey: string;
+}
+
+function askQuestion(query: string): Promise<string> {
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout
+  });
+  return new Promise((resolve) => {
+    rl.question(query, (answer) => {
+      rl.close();
+      resolve(answer.trim());
+    });
+  });
+}
+
+function updateAppJson(cwd: string, serverUrl: string) {
+  const appJsonPath = path.resolve(cwd, "app.json");
+  if (!fs.existsSync(appJsonPath)) {
+    console.log("⚠️   app.json not found in this directory. Skipping auto-update.");
+    return;
+  }
+
+  try {
+    const raw = fs.readFileSync(appJsonPath, "utf-8");
+    const data = JSON.parse(raw);
+    
+    if (!data.expo) {
+      data.expo = {};
+    }
+    if (!data.expo.updates) {
+      data.expo.updates = {};
+    }
+    
+    const updateUrl = `${serverUrl.replace(/\/$/, "")}/api/updates`;
+    data.expo.updates.url = updateUrl;
+    
+    fs.writeFileSync(appJsonPath, JSON.stringify(data, null, 2), "utf-8");
+    console.log(`✅  Updated app.json: expo.updates.url set to "${updateUrl}"`);
+  } catch (error: any) {
+    console.error(`❌  Failed to update app.json: ${error.message}`);
+  }
 }
 
 function loadConfig(cwd: string): EdgeOTAConfig {
@@ -104,6 +146,7 @@ interface AssetEntry {
 
 const CONTENT_TYPES: Record<string, string> = {
   ".js":    "application/javascript",
+  ".hbc":   "application/javascript",
   ".json":  "application/json",
   ".png":   "image/png",
   ".jpg":   "image/jpeg",
@@ -151,19 +194,21 @@ async function collectAssets(distDir: string): Promise<AssetEntry[]> {
 // ─── Detect the JS bundle within the Expo export output ──────────────────────
 
 function findBundle(distDir: string, platform: string): string | null {
-  // Expo SDK 50+ writes: dist/_expo/static/js/<platform>/<hash>.js
+  // Expo SDK 50+ writes: dist/_expo/static/js/<platform>/<hash>.js (or .hbc)
   const expoStaticJs = path.join(distDir, "_expo", "static", "js", platform);
   if (fs.existsSync(expoStaticJs)) {
-    const files = fs.readdirSync(expoStaticJs).filter(f => f.endsWith(".js"));
+    const files = fs.readdirSync(expoStaticJs).filter(f => f.endsWith(".js") || f.endsWith(".hbc"));
     if (files.length) return path.join(expoStaticJs, files[0]);
   }
 
   // Fallback: older SDK flat layout
-  const flat = path.join(distDir, `index.${platform}.js`);
-  if (fs.existsSync(flat)) return flat;
+  const flatJs = path.join(distDir, `index.${platform}.js`);
+  if (fs.existsSync(flatJs)) return flatJs;
+  const flatHbc = path.join(distDir, `index.${platform}.hbc`);
+  if (fs.existsSync(flatHbc)) return flatHbc;
 
-  // Any .js at root
-  const rootJs = fs.readdirSync(distDir).find(f => f.endsWith(".js"));
+  // Any .js or .hbc at root
+  const rootJs = fs.readdirSync(distDir).find(f => f.endsWith(".js") || f.endsWith(".hbc"));
   if (rootJs) return path.join(distDir, rootJs);
 
   return null;
@@ -188,18 +233,38 @@ program
   )
   .option(
     "-s, --server <url>",
-    "EdgeOTA server URL",
-    "http://localhost:3000"
+    "EdgeOTA server URL"
   )
   .action(async (options) => {
+    let serverUrl = options.server;
+    if (!serverUrl) {
+      console.log("ℹ️  Server URL not provided via -s/--server.");
+      const answer = await askQuestion(
+        "Enter your EdgeOTA server URL [http://localhost:3000]: "
+      );
+      if (!answer) {
+        serverUrl = "http://localhost:3000";
+      } else if (answer.toLowerCase().includes("host")) {
+        console.log("\nℹ️  Please set the server URL to your hosted EdgeOTA instance (e.g. https://ota.renbostudios.com)");
+        const hostedAnswer = await askQuestion("Hosted server URL: ");
+        serverUrl = hostedAnswer.trim() || "http://localhost:3000";
+      } else {
+        serverUrl = answer;
+      }
+    }
+
+    // Normalise URL (remove trailing slashes)
+    serverUrl = serverUrl.replace(/\/$/, "");
+
     console.log("⚙️  Generating ECDSA P-256 key pair...");
     const keys = await generateECDSAKeyPair();
 
     const config: EdgeOTAConfig = {
-      serverUrl: options.server,
+      serverUrl: serverUrl,
       publicKey: keys.publicKey
     };
 
+    const cwd = process.cwd();
     fs.writeFileSync("edge-ota.config.json", JSON.stringify(config, null, 2));
     fs.writeFileSync(".edge-ota.private.key", keys.privateKey, { mode: 0o600 });
 
@@ -216,15 +281,18 @@ program
       fs.writeFileSync(gitignorePath, `${gitignoreEntry}\n`);
     }
 
+    // Auto-update app.json updates.url
+    updateAppJson(cwd, serverUrl);
+
     console.log("\n✅  EdgeOTA initialised.");
     console.log("   Config :  edge-ota.config.json");
     console.log("   Key    :  .edge-ota.private.key  (keep this secret!)");
     console.log("\n📋  Public key to paste into your dashboard → Settings → Infrastructure:\n");
     console.log(keys.publicKey);
     console.log(
-      "\n💡  Add this to your app.json:\n" +
+      "\n💡  Your app.json updates configuration has been configured to:\n" +
         '   "updates": {\n' +
-        '     "url": "' + options.server + '/api/updates"\n' +
+        '     "url": "' + serverUrl + '/api/updates"\n' +
         "   }"
     );
   });

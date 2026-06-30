@@ -30,15 +30,18 @@ edge-ota status
 
 ### `edge-ota init [options]`
 
-Generates an ECDSA P-256 key pair, writes `edge-ota.config.json` and `.edge-ota.private.key`, and auto-adds the private key to `.gitignore`.
+Generates an ECDSA P-256 key pair, writes `edge-ota.config.json` and `.edge-ota.private.key`, auto-adds the private key to `.gitignore`, and automatically updates your Expo `app.json` configuration file with the new updates URL.
+
+If `-s` or `--server` is not specified, you will be prompted interactively to enter the URL of your hosted or local EdgeOTA server.
 
 | Option | Default | Description |
 |--------|---------|-------------|
-| `-s, --server <url>` | `http://localhost:3000` | Your EdgeOTA server URL |
+| `-s, --server <url>` | — | Your EdgeOTA server URL (prompts if omitted) |
 
 **Output:**
 - `edge-ota.config.json` — server URL + public key (safe to commit)
 - `.edge-ota.private.key` — private signing key (**never commit this**)
+- **Auto-configured:** `app.json` is modified to point `expo.updates.url` to your server's `/api/updates` endpoint.
 
 ---
 
