@@ -39,6 +39,39 @@ import {
   sha256Hex
 } from "./core/index.js";
 
+// ─── ANSI Styling Helpers ───────────────────────────────────────────────────
+
+const colors = {
+  reset: "\x1b[0m",
+  bold: "\x1b[1m",
+  dim: "\x1b[2m",
+  underline: "\x1b[4m",
+  
+  // Foreground Colors
+  black: "\x1b[30m",
+  red: "\x1b[31m",
+  green: "\x1b[32m",
+  yellow: "\x1b[33m",
+  blue: "\x1b[34m",
+  magenta: "\x1b[35m",
+  cyan: "\x1b[36m",
+  white: "\x1b[37m",
+  gray: "\x1b[90m",
+};
+
+function printBanner() {
+  console.log(`\n${colors.bold}${colors.cyan}  ┌──────────────────────────────────────────────────┐`);
+  console.log(`  │ ${colors.magenta}__   _   _   _   _   _   _   _   _   _   _   _   _ ${colors.cyan}│`);
+  console.log(`  │${colors.bold}${colors.white}  ███████╗██████╗  ██████╗ ███████╗ ██████╗ ████████╗ █████╗  ${colors.cyan}│`);
+  console.log(`  │${colors.bold}${colors.white}  ██╔════╝██╔══██╗██╔════╝ ██╔════╝██╔═══██╗╚══██╔══╝██╔══██╗ ${colors.cyan}│`);
+  console.log(`  │${colors.bold}${colors.white}  █████╗  ██║  ██║██║  ███╗█████╗  ██║   ██║   ██║   ███████║ ${colors.cyan}│`);
+  console.log(`  │${colors.bold}${colors.white}  ██╔══╝  ██║  ██║██║   ██║██╔══╝  ██║   ██║   ██║   ██╔══██║ ${colors.cyan}│`);
+  console.log(`  │${colors.bold}${colors.white}  ███████╗██████╔╝╚██████╔╝███████╗╚██████╔╝   ██║   ██║  ██║ ${colors.cyan}│`);
+  console.log(`  │${colors.bold}${colors.white}  ╚══════╝╚═════╝  ╚═════╝ ╚══════╝ ╚═════╝    ╚═╝   ╚═╝  ╚═╝ ${colors.cyan}│`);
+  console.log(`  │  ${colors.gray}Zero-SDK OTA Update Platform — By Renbo Studios  ${colors.cyan}│`);
+  console.log(`  └──────────────────────────────────────────────────┘${colors.reset}\n`);
+}
+
 // ─── Config helpers ──────────────────────────────────────────────────────────
 
 interface EdgeOTAConfig {
@@ -243,18 +276,19 @@ program
     "EdgeOTA Project ID (optional)"
   )
   .action(async (options) => {
+    printBanner();
     let serverUrl = options.server;
     let projectId = options.project;
 
     if (!serverUrl) {
-      console.log("ℹ️  Server URL not provided via -s/--server.");
+      console.log(`${colors.bold}${colors.cyan}ℹ️  Server URL not provided via -s/--server.${colors.reset}`);
       const answer = await askQuestion(
         "Enter your EdgeOTA server URL [http://localhost:3000]: "
       );
       if (!answer) {
         serverUrl = "http://localhost:3000";
       } else if (answer.toLowerCase().includes("host")) {
-        console.log("\nℹ️  Please set the server URL to your hosted EdgeOTA instance (e.g. https://ota.renbostudios.com)");
+        console.log(`\n${colors.bold}${colors.yellow}ℹ️  Please set the server URL to your hosted EdgeOTA instance (e.g. https://api.edge-ota.renbo.site)${colors.reset}`);
         const hostedAnswer = await askQuestion("Hosted server URL: ");
         serverUrl = hostedAnswer.trim() || "http://localhost:3000";
       } else {
@@ -263,7 +297,7 @@ program
     }
 
     if (!projectId && !options.server) {
-      console.log("\nℹ️  Project ID not provided via --project.");
+      console.log(`\n${colors.bold}${colors.cyan}ℹ️  Project ID not provided via --project.${colors.reset}`);
       const pAnswer = await askQuestion(
         "Enter your EdgeOTA Project ID (optional, press Enter for single-tenant self-hosted): "
       );
@@ -275,7 +309,7 @@ program
     // Normalise URL (remove trailing slashes)
     serverUrl = serverUrl.replace(/\/$/, "");
 
-    console.log("⚙️  Generating ECDSA P-256 key pair...");
+    console.log(`⚙️  Generating ECDSA P-256 key pair...`);
     const keys = await generateECDSAKeyPair();
 
     const config: EdgeOTAConfig = {
@@ -310,20 +344,21 @@ program
       ? `${serverUrl}/api/projects/${projectId}/updates`
       : `${serverUrl}/api/updates`;
 
-    console.log("\n✅  EdgeOTA initialised.");
-    console.log("   Config :  edge-ota.config.json");
-    console.log("   Key    :  .edge-ota.private.key  (keep this secret!)");
-    console.log("\n📋  Public key to paste into your dashboard → Settings → Infrastructure:\n");
-    console.log(keys.publicKey);
-    console.log(
-      "\n💡  Your app.json updates configuration has been configured to:\n" +
-        '   "updates": {\n' +
-        '     "url": "' + targetUrlStr + '"\n' +
-        "   }\n" +
-      "\n✨  Powered by EdgeOTA — A product of Renbo Studios" +
-      "\n🚀  Need scalable app development or custom Cloudflare setup?" +
-      "\n👉  Partner with us at https://renbostudios.com to launch your next project!"
-    );
+    console.log(`\n${colors.bold}${colors.green}✔  EdgeOTA initialised successfully!${colors.reset}`);
+    console.log(`${colors.gray}──────────────────────────────────────────────────${colors.reset}`);
+    console.log(`📂  ${colors.bold}Config :${colors.reset}  ${colors.cyan}edge-ota.config.json${colors.reset}`);
+    console.log(`🔑  ${colors.bold}Key    :${colors.reset}  ${colors.yellow}.edge-ota.private.key${colors.reset} ${colors.dim}(keep secret!)${colors.reset}`);
+    
+    console.log(`\n${colors.bold}${colors.white}📋  Public key to paste into dashboard → Settings → General:${colors.reset}\n`);
+    console.log(`${colors.gray}${keys.publicKey}${colors.reset}`);
+    
+    console.log(`\n${colors.bold}${colors.white}💡  Auto-configured app.json updates endpoint:${colors.reset}`);
+    console.log(`   ${colors.dim}"updates": { "url": "${colors.reset}${colors.cyan}${targetUrlStr}${colors.reset}${colors.dim}" }${colors.reset}\n`);
+    
+    console.log(`${colors.gray}──────────────────────────────────────────────────${colors.reset}`);
+    console.log(`✨  ${colors.bold}${colors.white}Powered by EdgeOTA${colors.reset} — A product of ${colors.magenta}Renbo Studios${colors.reset}`);
+    console.log(`🚀  Need scalable app development or custom Cloudflare setup?`);
+    console.log(`👉  Partner with us at ${colors.underline}${colors.cyan}https://renbostudios.com${colors.reset} to launch your next project!\n`);
   });
 
 // ──────────────────────────────────────────────────────
@@ -350,39 +385,40 @@ program
     const privateKey = loadPrivateKey(cwd);
 
     // ── Step 1: Build ────────────────────────────────────────────────────────
+    printBanner();
     const distDir = path.resolve(cwd, "dist");
 
     if (!options.skipExport) {
-      console.log("📦  Running expo export...");
+      console.log(`${colors.bold}${colors.cyan}📦  Running expo export...${colors.reset}`);
       try {
         execSync("npx expo export", { stdio: "inherit", cwd });
       } catch {
-        console.error("❌  expo export failed. Aborting.");
+        console.error(`${colors.bold}${colors.red}❌  expo export failed. Aborting.${colors.reset}`);
         process.exit(1);
       }
     } else {
-      console.log("⏭️   Skipping expo export (--skip-export)");
+      console.log(`${colors.bold}${colors.yellow}⏭️   Skipping expo export (--skip-export)${colors.reset}`);
     }
 
     if (!fs.existsSync(distDir)) {
-      console.error("❌  ./dist directory not found after export. Aborting.");
+      console.error(`${colors.bold}${colors.red}❌  ./dist directory not found after export. Aborting.${colors.reset}`);
       process.exit(1);
     }
 
     // ── Step 2: Collect assets & hashes ─────────────────────────────────────
-    console.log("🔍  Collecting assets and computing SHA-256 hashes...");
+    console.log(`\n${colors.bold}${colors.cyan}🔍  Collecting assets and computing SHA-256 hashes...${colors.reset}`);
     const assets = await collectAssets(distDir);
-    console.log(`   Found ${assets.length} asset(s)`);
+    console.log(`   Found ${colors.bold}${colors.white}${assets.length}${colors.reset} asset(s)`);
 
     const platforms = options.platform === "all" ? ["ios", "android"] : [options.platform];
 
     for (const platform of platforms) {
-      console.log(`\n🚀  Processing platform: ${platform.toUpperCase()}`);
+      console.log(`\n${colors.bold}${colors.magenta}🚀  Processing platform: ${platform.toUpperCase()}${colors.reset}`);
 
       // Find the JS bundle
       const bundlePath = findBundle(distDir, platform);
       if (!bundlePath) {
-        console.warn(`⚠️   No bundle found for ${platform}. Skipping.`);
+        console.warn(`${colors.bold}${colors.yellow}⚠️   No bundle found for ${platform}. Skipping.${colors.reset}`);
         continue;
       }
 
@@ -400,38 +436,33 @@ program
       };
       const payloadStr = JSON.stringify(payloadObj);
 
-      console.log("🔏  Signing payload with ECDSA P-256...");
+      console.log(`🔏  Signing payload with ECDSA P-256...`);
       const signature = await signPayload(payloadStr, privateKey);
-      console.log(`   Signature: ${signature.slice(0, 24)}…`);
+      console.log(`   Signature: ${colors.dim}${signature.slice(0, 24)}…${colors.reset}`);
 
       if (options.dryRun) {
-        console.log("🏳️   Dry run — skipping upload.");
+        console.log(`${colors.bold}${colors.yellow}🏳️   Dry run — skipping upload.${colors.reset}`);
         console.log("   Payload:", payloadObj);
         continue;
       }
 
       // ── Step 4: Upload ─────────────────────────────────────────────────────
-      // Pack the whole dist directory into a zip for server-side extraction
       const zipPath = path.resolve(cwd, `update-bundle-${platform}.zip`);
-      console.log("🗜️   Zipping bundle...");
+      console.log(`🗜️   Zipping bundle...`);
       await zipDirectory(distDir, zipPath);
 
       const zipBuffer = fs.readFileSync(zipPath);
 
-      // Build multipart/form-data manually (Node 18+ has FormData but
-      // Blob.arrayBuffer is not always available; use Buffer directly).
       const form = new FormData();
       form.append("bundle",    new Blob([zipBuffer], { type: "application/zip" }), `bundle-${platform}.zip`);
       form.append("payload",   payloadStr);
       form.append("signature", signature);
       form.append("platform",  platform);
 
-      console.log(`📡  Uploading to ${config.serverUrl}/api/updates ...`);
+      console.log(`📡  Uploading to ${colors.cyan}${config.serverUrl}/api/updates${colors.reset} ...`);
       const response = await fetch(`${config.serverUrl}/api/updates`, {
         method:  "POST",
         body:    form
-        // Note: do NOT set Content-Type; fetch sets it automatically
-        //       with the correct multipart boundary.
       });
 
       // Clean up zip
@@ -440,23 +471,23 @@ program
       if (response.ok) {
         const body = await response.json().catch(() => ({})) as any;
         const updateId = body.updateId || "unknown";
-        console.log(`\n✅  ${platform.toUpperCase()} update deployed!`);
-        console.log(`   Update ID : ${updateId}`);
-        console.log(`   Channel   : ${options.channel}`);
-        console.log(`   Runtime   : ${options.runtime}`);
-        console.log(`   Bundle    : ${bundleHash.slice(0, 16)}…`);
+        console.log(`\n${colors.bold}${colors.green}✔  ${platform.toUpperCase()} update deployed successfully!${colors.reset}`);
+        console.log(`   ${colors.bold}Update ID :${colors.reset} ${colors.cyan}${updateId}${colors.reset}`);
+        console.log(`   ${colors.bold}Channel   :${colors.reset} ${colors.white}${options.channel}${colors.reset}`);
+        console.log(`   ${colors.bold}Runtime   :${colors.reset} ${colors.white}${options.runtime}${colors.reset}`);
+        console.log(`   ${colors.bold}Bundle    :${colors.reset} ${colors.gray}${bundleHash.slice(0, 16)}…${colors.reset}`);
       } else {
         const text = await response.text();
-        console.error(`\n❌  Upload failed (HTTP ${response.status}): ${text}`);
+        console.error(`\n${colors.bold}${colors.red}❌  Upload failed (HTTP ${response.status}): ${text}${colors.reset}`);
         process.exit(1);
       }
     }
 
     console.log(
-      "\n🎉  Done. Your app will receive this update on the next OTA sync.\n" +
-      "\n✨  Powered by EdgeOTA — A product of Renbo Studios" +
-      "\n🚀  Need scalable app development or custom Cloudflare setup?" +
-      "\n👉  Partner with us at https://renbostudios.com to launch your next project!"
+      `\n${colors.bold}${colors.green}🎉  Done. Your app will receive this update on the next OTA sync.${colors.reset}\n` +
+      `\n✨  ${colors.bold}${colors.white}Powered by EdgeOTA${colors.reset} — A product of ${colors.magenta}Renbo Studios${colors.reset}` +
+      `\n🚀  Need scalable app development or custom Cloudflare setup?` +
+      `\n👉  Partner with us at ${colors.underline}${colors.cyan}https://renbostudios.com${colors.reset} to launch your next project!\n`
     );
   });
 

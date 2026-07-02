@@ -1,4 +1,4 @@
-# `@renbostudios/edge-ota`
+# `@edge-ota/cli`
 
 > Zero-SDK, self-hostable OTA update CLI for Expo apps.  
 > Push cryptographically signed JS bundles to any EdgeOTA server — no Expo account required.
@@ -6,9 +6,9 @@
 ## Install
 
 ```bash
-npm install -g @renbostudios/edge-ota
+npm install -g @edge-ota/cli
 # or use without installing:
-npx @renbostudios/edge-ota <command>
+npx @edge-ota/cli <command>
 ```
 
 ## Quick Start
