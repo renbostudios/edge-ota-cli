@@ -377,12 +377,29 @@ program
     "all"
   )
   .option("--project <id>", "Project ID (optional, overrides config)")
+  .option("-t, --token <token>", "Deploy key token (or set EDGE_OTA_TOKEN env var)")
   .option("--skip-export", "Skip expo export (use existing ./dist directory)")
   .option("--dry-run", "Build and sign the payload but do NOT upload")
   .action(async (options) => {
     const cwd = process.cwd();
     const config     = loadConfig(cwd);
     const privateKey = loadPrivateKey(cwd);
+
+    // Resolve token — CLI flag > env var
+    const token = options.token || process.env.EDGE_OTA_TOKEN;
+    if (!token) {
+      console.error(`${colors.bold}${colors.red}❌  Auth token required. Use --token <token> or set EDGE_OTA_TOKEN env var.${colors.reset}`);
+      console.error(`   Generate a deploy key from your dashboard → Keys page.`);
+      process.exit(1);
+    }
+
+    // Resolve project ID — CLI flag > config file
+    const projectId = options.project || config.projectId;
+
+    // Build the correct upload URL
+    const uploadUrl = projectId
+      ? `${config.serverUrl}/api/projects/${projectId}/updates`
+      : `${config.serverUrl}/api/updates`;
 
     // ── Step 1: Build ────────────────────────────────────────────────────────
     printBanner();
@@ -409,6 +426,10 @@ program
     console.log(`\n${colors.bold}${colors.cyan}🔍  Collecting assets and computing SHA-256 hashes...${colors.reset}`);
     const assets = await collectAssets(distDir);
     console.log(`   Found ${colors.bold}${colors.white}${assets.length}${colors.reset} asset(s)`);
+
+    if (projectId) {
+      console.log(`   Project   : ${colors.bold}${colors.cyan}${projectId}${colors.reset}`);
+    }
 
     const platforms = options.platform === "all" ? ["ios", "android"] : [options.platform];
 
@@ -459,10 +480,14 @@ program
       form.append("signature", signature);
       form.append("platform",  platform);
 
-      console.log(`📡  Uploading to ${colors.cyan}${config.serverUrl}/api/updates${colors.reset} ...`);
-      const response = await fetch(`${config.serverUrl}/api/updates`, {
+      console.log(`📡  Uploading to ${colors.cyan}${uploadUrl}${colors.reset} ...`);
+      const response = await fetch(uploadUrl, {
         method:  "POST",
-        body:    form
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          ...(projectId ? { "X-Project-Id": projectId } : {})
+        },
+        body: form
       });
 
       // Clean up zip
