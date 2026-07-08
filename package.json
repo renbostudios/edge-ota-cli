@@ -1,6 +1,6 @@
 {
   "name": "@renbostudios/edge-ota",
-  "version": "0.2.6",
+  "version": "0.2.7",
   "preferGlobal": true,
   "description": "Zero-SDK, self-hostable OTA update CLI for Expo — push signed JS bundles to any EdgeOTA server",
   "license": "MIT",

@@ -50,18 +50,40 @@ export interface ManifestParams {
  * The client SDK deserialises this from the `manifest` part of the
  * multipart response (or directly from the response body in non-multipart mode).
  */
+function hexToBase64Url(hex: string): string {
+  if (hex.length !== 64 || !/^[0-9a-fA-F]+$/.test(hex)) {
+    return hex;
+  }
+  const bytes = new Uint8Array(hex.length / 2);
+  for (let i = 0; i < hex.length; i += 2) {
+    bytes[i / 2] = parseInt(hex.substring(i, i + 2), 16);
+  }
+  let binString = "";
+  for (let i = 0; i < bytes.length; i++) {
+    binString += String.fromCharCode(bytes[i]);
+  }
+  const base64 = btoa(binString);
+  return base64
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
+}
+
 export function generateExpoManifest(params: ManifestParams): ExpoManifest {
   return {
     id: params.updateId,
     createdAt: params.createdAt,
     runtimeVersion: params.runtimeVersion,
     launchAsset: {
-      hash: params.bundleHash,
+      hash: hexToBase64Url(params.bundleHash),
       key: "bundle",
       contentType: "application/javascript",
       url: params.bundleUrl
     },
-    assets: params.assets,
+    assets: params.assets.map(asset => ({
+      ...asset,
+      hash: hexToBase64Url(asset.hash)
+    })),
     metadata: params.metadata ?? {},
     extra: params.extra ?? {}
   };
@@ -112,7 +134,8 @@ export function buildMultipartManifestBody(
   const boundary = "expo-update-boundary-" + Math.random().toString(36).slice(2, 10);
   const manifestJson = JSON.stringify(manifest);
 
-  let partHeaders = "Content-Type: application/json\r\n";
+  let partHeaders = "Content-Disposition: inline; name=\"manifest\"\r\n";
+  partHeaders += "Content-Type: application/json\r\n";
   if (signature) {
     partHeaders += `expo-signature: sig="${signature}", keyid="root", alg="ecdsa-p256-sha256"\r\n`;
   }

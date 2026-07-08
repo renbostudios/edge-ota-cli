@@ -442,13 +442,10 @@ program
         continue;
       }
 
-      const zipPath = path.resolve(cwd, `update-bundle-${platform}.zip`);
-      console.log(`  packing    bundle → zip`);
-      await zipDirectory(distDir, zipPath);
-
-      const zipBuffer = fs.readFileSync(zipPath);
+      console.log(`  packing    bundle`);
+      const bundleBuffer = fs.readFileSync(bundlePath);
       const form = new FormData();
-      form.append("bundle",    new Blob([zipBuffer], { type: "application/zip" }), `bundle-${platform}.zip`);
+      form.append("bundle",    new Blob([bundleBuffer], { type: "application/javascript" }), `bundle-${platform}.hbc`);
       form.append("payload",   payloadStr);
       form.append("signature", signature);
       form.append("platform",  platform);
@@ -462,8 +459,6 @@ program
         },
         body: form
       });
-
-      fs.unlinkSync(zipPath);
 
       if (response.ok) {
         const body = await response.json().catch(() => ({})) as any;
