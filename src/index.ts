@@ -278,10 +278,30 @@ function readAppJson(cwd: string): AppJsonConfig {
   const expo = data?.expo ?? {};
 
   // ── Runtime version ──
-  const runtimeVersion = expo.runtimeVersion;
+  let runtimeVersion = expo.runtimeVersion;
   if (!runtimeVersion) {
     console.error(`  ${c.red}✗${c.reset}  ${c.bold}expo.runtimeVersion${c.reset} is not set in app.json`);
     console.error(`     Add: ${c.dim}"runtimeVersion": "1.0.0"${c.reset} under the expo key.\n`);
+    process.exit(1);
+  }
+
+  // Resolve runtimeVersion object (e.g. policy helper) to string
+  if (typeof runtimeVersion === "object" && runtimeVersion !== null) {
+    const policy = (runtimeVersion as any).policy;
+    if (policy === "appVersion") {
+      runtimeVersion = expo.version;
+    } else if (policy === "sdkVersion") {
+      runtimeVersion = expo.sdkVersion;
+    } else {
+      runtimeVersion = expo.version || expo.sdkVersion;
+    }
+  }
+
+  if (!runtimeVersion || typeof runtimeVersion !== "string") {
+    console.error(`  ${c.red}✗${c.reset}  Could not resolve ${c.bold}expo.runtimeVersion${c.reset} to a valid string in app.json`);
+    if (typeof expo.runtimeVersion === "object") {
+      console.error(`     Since you are using a policy, please ensure either ${c.bold}expo.version${c.reset} or ${c.bold}expo.sdkVersion${c.reset} is defined.\n`);
+    }
     process.exit(1);
   }
 
@@ -643,6 +663,7 @@ program
       console.log(`  ${c.green}✓${c.reset}  Logged in as ${c.bold}${data.email}${c.reset}`);
       console.log(`  ${c.dim}credentials saved to ${GLOBAL_CONFIG_FILE}${c.reset}`);
       console.log(sep + "\n");
+      process.exit(0);
     } catch (e: any) {
       spin.fail(`Connection failed: ${e.message}`);
       process.exit(1);
@@ -665,6 +686,7 @@ program
     } else {
       console.log(`  ${c.dim}Already logged out.${c.reset}\n`);
     }
+    process.exit(0);
   });
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -796,8 +818,29 @@ program
       console.log(`  project    ${c.dim}${projectId}${c.reset}`);
       console.log(`  server     ${c.dim}${serverUrl}${c.reset}`);
       console.log(`  key file   ${c.dim}${path.join(GLOBAL_KEYS_DIR, `${projectId}.key`)}${c.reset}`);
+      console.log(sep);
+
+      console.log(`\n${c.bold}${c.yellow}  ⚠  REBUILD REQUIRED${c.reset}`);
+      console.log(sep);
+      console.log(`  ${c.bold}Your native app MUST be rebuilt for OTA updates${c.reset}`);
+      console.log(`  ${c.bold}to work.${c.reset} The server URL is baked into the native`);
+      console.log(`  binary at build time — not read from app.json.`);
+      console.log();
+      console.log(`  Run these commands in order:`);
+      console.log();
+      console.log(`    ${c.cyan}npx expo prebuild --clean${c.reset}`);
+      console.log(`    ${c.cyan}npx expo run:ios${c.reset}`);
+      console.log(`    ${c.cyan}npx expo run:android${c.reset}`);
+      console.log();
+      console.log(`  Or via EAS:`);
+      console.log(`    ${c.cyan}eas build --profile production${c.reset}`);
+      console.log();
+      console.log(`  ${c.red}Skipping this WILL cause "Failed to check for${c.reset}`);
+      console.log(`  ${c.red}update" errors on app launch.${c.reset}`);
       console.log(sep + "\n");
-      console.log(`  ${c.dim}Next step:${c.reset} run ${c.cyan}edge-ota push${c.reset} to publish your first update.\n`);
+
+      console.log(`  Then run ${c.cyan}edge-ota push${c.reset} to publish your first update.\n`);
+      process.exit(0);
     }
   });
 
@@ -983,6 +1026,7 @@ program
     console.log(`\n${sep}`);
     console.log(`  ${c.green}✓${c.reset}  ${c.bold}done${c.reset}  ${c.dim}update will be applied on next OTA sync${c.reset}`);
     console.log(`${sep}\n`);
+    process.exit(0);
   });
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -1026,7 +1070,7 @@ program
 
     if (!releases.length) {
       console.log(`  ${c.dim}No releases found.${c.reset}\n`);
-      return;
+      process.exit(0);
     }
 
     const limit = parseInt(options.limit);
@@ -1039,6 +1083,7 @@ program
     }));
 
     console.table(rows);
+    process.exit(0);
   });
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -1059,6 +1104,7 @@ program
     console.log(`  ${c.bold}public key${c.reset}   ${c.dim}paste into dashboard → Settings → General${c.reset}`);
     console.log(sep);
     console.log(keys.publicKey);
+    process.exit(0);
   });
 
 await checkAndAutoUpdate();

@@ -1,17 +1,17 @@
 {
   "name": "@renbostudios/edge-ota",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "preferGlobal": true,
   "description": "Zero-SDK, self-hostable OTA update CLI for Expo — push signed JS bundles to any EdgeOTA server",
   "license": "MIT",
   "author": "EdgeOTA Contributors",
-  "homepage": "https://github.com/renbostudios/edge-ota",
+  "homepage": "https://github.com/renbostudios/edge-ota-cli",
   "repository": {
     "type": "git",
-    "url": "https://github.com/renbostudios/edge-ota.git"
+    "url": "https://github.com/renbostudios/edge-ota-cli.git"
   },
   "bugs": {
-    "url": "https://github.com/renbostudios/edge-ota/issues"
+    "url": "https://github.com/renbostudios/edge-ota-cli/issues"
   },
   "keywords": [
     "expo",
