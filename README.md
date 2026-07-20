@@ -102,9 +102,9 @@ edge-ota push
 > **📹 Prefer video?** Watch the full setup tutorial below:
 
 <p align="center">
-<a href="https://pd1mvpk7lt.ufs.sh/f/6uDGWrRxa3ipmhByNjc2TlHph0oA4dsWRFUuqZMan18Gwb7g">
-  <img src="path/to/preview-thumbnail.gif" width="640">
-</a>
+  <a href="https://pd1mvpk7lt.ufs.sh/f/6uDGWrRxa3ipmhByNjc2TlHph0oA4dsWRFUuqZMan18Gwb7g">
+    <img src="https://ota.renbo.site/og.png" width="640" alt="Watch the video tutorial">
+  </a>
 </p>
 
 <br>
